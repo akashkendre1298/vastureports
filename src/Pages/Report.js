@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -9,8 +9,55 @@ const Report = () => {
   const [fileType, setFileType] = useState("pdf");
   const [startMonth, setStartMonth] = useState("");
   const [endMonth, setEndMonth] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const userData = localStorage.getItem("userData");
+
+    if (!userData) {
+      alert("You must log in first");
+      return;
+    }
+
+    const { token } = JSON.parse(userData);
+
+    if (!token) {
+      alert("You must log in first");
+    }
+  }, []);
+
+  const validateMonths = () => {
+    const today = new Date();
+    const startDate = new Date(today.getFullYear(), startMonth - 1); // Month is 0-indexed
+    const endDate = new Date(today.getFullYear(), endMonth - 1); // Month is 0-indexed
+
+    if (!startMonth || !endMonth) {
+      setErrorMessage("Please select both start and end months.");
+      setTimeout(() => setErrorMessage(""), 3000); // Clear message after 3 seconds
+      return false;
+    }
+
+    if (endDate < startDate) {
+      setErrorMessage("End month cannot be earlier than start month.");
+      setTimeout(() => setErrorMessage(""), 3000); // Clear message after 3 seconds
+      return false;
+    }
+
+    if (endDate > today) {
+      setErrorMessage("End month cannot exceed today's date.");
+      setTimeout(() => setErrorMessage(""), 3000); // Clear message after 3 seconds
+      return false;
+    }
+
+    setErrorMessage(""); // Clear error message if validation passes
+    return true;
+  };
 
   const generateReport = async () => {
+    if (!validateMonths()) {
+      return; // Stop the report generation if validation fails
+    }
+
     let apiUrl;
 
     switch (selectedReport) {
@@ -239,8 +286,17 @@ const Report = () => {
           ))}
         </select>
       </div>
+      {errorMessage && (
+        <div
+          className="error-message"
+          style={{ color: "red", marginBottom: "10px" }}
+        >
+          {errorMessage}
+        </div>
+      )}{" "}
+      {/* Error message will be styled in red */}
       <div className="form-group">
-        <label>File Type</label>
+        <label>Select File Type</label>
         <select
           onChange={(e) => setFileType(e.target.value)}
           className="select-input"
